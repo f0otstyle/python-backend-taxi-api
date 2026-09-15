@@ -1,0 +1,17 @@
+# Виртуальное окружение
+venv/
+env/
+.env/
+.venv/
+.env
+.idea/
+.vscode/
+
+# Файлы Python
+__pycache__/
+
+# Логи
+async_client.log
+compare.log
+sync_client.log
+*.log

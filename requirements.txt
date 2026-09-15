@@ -1,0 +1,7 @@
+uvicorn
+fastapi
+asyncpg
+authx
+bcrypt
+sqlalchemy[asyncio]
+asyncpg
