@@ -26,9 +26,14 @@ jobs:
       
       - name: Build container db
         run: docker compose up -d db
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       - name: Run test app
-        run: docker compose run --rm pytest
+        run: pytest -v
       
       - name: Stop container
         if: always()
