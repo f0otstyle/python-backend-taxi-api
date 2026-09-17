@@ -27,7 +27,7 @@ jobs:
           done
 
       - name: Start application
-        run: docker compose up -d app
+        run: docker compose up -d backend
 
       - name: Wait for application
         run: |
