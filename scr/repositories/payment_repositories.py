@@ -19,9 +19,10 @@ class PaymentRepository:
         if card:
             card.balance += money
         else:
-            card = PaymentORM(user_id=user_id, money=money)
+            card = PaymentORM(user_id=user_id, balance=money)
             self.db.add(card)
 
         await self.db.flush()
         await self.db.refresh(card)
         logger.info(f'Баланс пользователя {user_id} пополнен на {money} руб')
+        return card

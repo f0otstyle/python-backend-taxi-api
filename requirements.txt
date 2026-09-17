@@ -5,3 +5,5 @@ authx
 bcrypt
 sqlalchemy[asyncio]
 asyncpg
+pytest
+requests

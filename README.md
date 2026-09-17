@@ -87,6 +87,11 @@ python -m venv venv
 source venv/Scripts/activate
 ```
 
+### Скопируйте env-файл:
+```bash
+cp .env.example .env
+```
+
 ### Установка зависимостей
 ```bash
 pip install -r requirements.txt

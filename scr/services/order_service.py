@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 
-from error_handler import OrderError
+from error_handler import OrderError, SearchError
 from scr.repositories.driver_repositories import DriversRepository
 from scr.repositories.order_repositories import OrderTaxiRepository
 from scr.repositories.payment_repositories import PaymentRepository
@@ -93,15 +93,23 @@ class OrderTaxiService:
             logger.info('Список заказов пуст')
         return [OrderResponceSchema.model_validate(row) for row in rows]
 
-    async def delete_id_order(self, order_id) -> None:
+    async def delete_id_orders(self, order_id) -> None:
         order = await self.order_taxi_repo.get_by_id(order_id)
         if not order:
             logger.error('Записи нету')
+            raise SearchError()
 
-        await self.order_taxi_repo.delete_id_order(order)
+        await self.order_taxi_repo.delete_id_order(order_id)
         await self.db.commit()
         return None
 
     async def history_get(self) -> list[OrderResponceSchema]:
         rows = await self.order_taxi_repo.get_history()
         return [OrderResponceSchema.model_validate(row) for row in rows]
+
+    async def get_order_id(self, order_id) -> OrderResponceSchema:
+        row = await self.order_taxi_repo.get_by_id(order_id)
+        if not row:
+            raise SearchError()
+
+        return OrderResponceSchema.model_validate(row)

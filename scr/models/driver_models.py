@@ -9,4 +9,4 @@ class DriversORM(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str_256] = mapped_column(nullable=False)
     car: Mapped[str_256] = mapped_column(nullable=False)
-    money: Mapped[money_money] = mapped_column(Numeric(10, 2), nullable=False)
+    money: Mapped[money_money] = mapped_column(Numeric(10, 2), default=0)

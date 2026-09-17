@@ -13,7 +13,7 @@ class AuthRepository:
         existing = await self.db.scalar(
                 select(AuthORM).where(AuthORM.name == username)
                 )
-        await self.db.refresh(existing)
+
         return existing
 
     async def create_users(self, username: str, hashed_password: str):

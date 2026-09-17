@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      
+      - name: Prepare .env file
+        run: cp .env.example .env
+
+      - name: Build container
+        run: docker-compose build .
+      
+      - name: Build container db
+        run: docker-compose up -d db
+
+      - name: Run test app
+        run: docker compose run --rm . pytest
+      
+      - name: Stop container
+        if: always()
+        run: docker-compose down -v
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install linter
+        run: pip install ruff
+
+      - name: Run linter
+        run: ruff check . || true

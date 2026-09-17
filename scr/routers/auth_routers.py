@@ -7,8 +7,7 @@ from logging_log import logger
 
 from scr.schemas.auth_schemas import UserResponseSchema, UserRegisterSchema
 from scr.services.auth_service import AuthService
-from scr.db.session import config
-from taxi_api import security
+from scr.auth.security import security, config
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 

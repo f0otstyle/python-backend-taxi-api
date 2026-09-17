@@ -8,18 +8,16 @@ from scr.db.session import get_session
 
 from scr.services.payment_service import PaymentService
 from scr.schemas.payment_schemas import MoneySchema
-from taxi_api import security
+from scr.auth.security import security
 
 router = APIRouter(prefix="/pay", tags=["Taxi Orders"])
 
 
-@router.post('/',
-             status_code=status.HTTP_200_OK,
-             dependencies=[Depends(security.access_token_required)])
+@router.post('/top-up',
+             status_code=status.HTTP_200_OK)
 @log
 async def top_up_your_card(
     payload: MoneySchema,
-    user_id: int,
     session: AsyncSession = Depends(get_session),
     token_data: TokenPayload = Depends(security.access_token_required)
         ):
@@ -39,6 +37,6 @@ async def top_up_your_card(
 
     except IntegrityError:
         raise HTTPException(status_code=500, detail="Пользователь не найден")
-    except Exception:
-        logger.exception("Неожиданная ошибка")
+    except Exception as e:
+        logger.exception(f"Неожиданная ошибка {e}")
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")

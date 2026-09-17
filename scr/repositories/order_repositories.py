@@ -68,9 +68,11 @@ class OrderTaxiRepository:
         return result.scalars().all()
 
     async def get_idempotency_key(self, idempotency_key):
-        return await select(OrderTaxiORM).where(
-                    OrderTaxiORM.idempotency_key == idempotency_key
-                    )
+        result = await self.db.execute(
+            select(OrderTaxiORM)
+            .where(OrderTaxiORM.idempotency_key == idempotency_key)
+        )
+        return result.scalar_one_or_none()
 
     async def get_duplicate(self, to_address: str, user_id: int):
         return await self.db.scalar(select(OrderTaxiORM).where(

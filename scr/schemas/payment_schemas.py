@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 from decimal import Decimal
 
 
@@ -7,4 +7,9 @@ class MoneySchema(BaseModel):
 
 
 class PaymentResponceSchema(BaseModel):
-    money: Decimal
+    id: int
+    user_id: int
+    money: Decimal = Field(alias="balance")
+    model_config = ConfigDict(
+                from_attributes=True,
+                populate_by_name=True)

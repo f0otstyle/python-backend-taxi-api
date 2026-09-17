@@ -7,7 +7,7 @@ from scr.db.session import get_session
 from scr.services.order_service import OrderTaxiService
 from scr.schemas.order_schemas import OrderCreate, OrderResponceSchema
 
-from taxi_api import security
+from scr.auth.security import security
 
 router = APIRouter(prefix="/taxi", tags=["Taxi Orders"])
 
@@ -34,6 +34,21 @@ async def create_taxi_order(
     )
 
 
+@router.get(
+    "/{order_id}",
+    status_code=status.HTTP_200_OK,
+)
+async def order_order_order_id(
+    order_id: int,
+    session: AsyncSession = Depends(get_session),
+    token_data: TokenPayload = Depends(security.access_token_required)
+     ):
+
+    service = OrderTaxiService(db=session)
+
+    return await service.get_order_id(order_id)
+
+
 @router.delete(
     "/{order_id}",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -46,7 +61,7 @@ async def delete_taxi_order(
 
     service = OrderTaxiService(db=session)
 
-    await service.delete_id_order(
+    await service.delete_id_orders(
         order_id=order_id
     )
     return None

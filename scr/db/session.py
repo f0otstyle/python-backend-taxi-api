@@ -1,12 +1,11 @@
+from scr.models.base import Base
+
 from ..core.config import settings
 from sqlalchemy.ext.asyncio import (create_async_engine,
                                     AsyncSession,
                                     async_sessionmaker)
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-import os
-from authx import AuthXConfig
-from datetime import timedelta
 
 engine = create_async_engine(
     settings.DATABASE_URL_asyncpg,
@@ -17,19 +16,13 @@ AsyncSessionLocal = async_sessionmaker(engine,
                                        expire_on_commit=False)
 
 
-config = AuthXConfig(
-    JWT_SECRET_KEY=os.getenv('JWT_SECRET_KEY', 'SECRET-KEY'),
-    JWT_TOKEN_LOCATION=['cookies'],
-    JWT_ACCESS_COOKIE_NAME='my_cookie',
-    JWT_ACCESS_TOKEN_EXPIRES=timedelta(days=1),
-    JWT_COOKIE_CSRF_PROTECT=False,
-    )
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.engine = engine
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
     yield
+
     await engine.dispose()
 
 

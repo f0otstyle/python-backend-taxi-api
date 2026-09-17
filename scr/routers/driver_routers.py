@@ -8,7 +8,7 @@ from scr.db.session import get_session
 
 from scr.schemas.driver_schemas import DriverCreate
 from scr.services.driver_service import DriverService
-from taxi_api import security
+from scr.auth.security import security
 
 router = APIRouter(prefix="/drivers")
 

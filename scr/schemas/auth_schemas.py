@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class UserRegisterSchema(BaseModel):
@@ -8,4 +8,8 @@ class UserRegisterSchema(BaseModel):
 
 class UserResponseSchema(BaseModel):
     id: int
-    username: str
+    username: str = Field(validation_alias="name")
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True)
