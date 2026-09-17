@@ -22,13 +22,13 @@ jobs:
         run: cp .env.example .env
 
       - name: Build container
-        run: docker compose build .
+        run: docker compose build
       
       - name: Build container db
         run: docker compose up -d db
 
       - name: Run test app
-        run: docker compose run --rm . pytest
+        run: docker compose run --rm pytest
       
       - name: Stop container
         if: always()
