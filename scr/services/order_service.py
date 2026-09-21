@@ -8,6 +8,7 @@ from scr.repositories.payment_repositories import PaymentRepository
 from scr.schemas.order_schemas import OrderCreate, OrderResponceSchema
 from logging_log import logger
 from sqlalchemy.ext.asyncio import AsyncSession
+from scr.cache.redis import RedisCachedBackend
 
 
 TIME = 5
@@ -19,6 +20,7 @@ class OrderTaxiService:
         self.order_taxi_repo = OrderTaxiRepository(db=self.db)
         self.payment_repo = PaymentRepository(db=self.db)
         self.driver_repo = DriversRepository(db=self.db)
+        self.redis_cached = RedisCachedBackend(cache_ttl_seconds=3600)
 
     async def create_order_taxi(self,
                                 user_id: int,
@@ -69,7 +71,7 @@ class OrderTaxiService:
             self.db.add(user_card)
             self.db.add(driver)
 
-            new_order_taxi = await self.order_taxi_repo.create_order_taxi(
+            new_order_taxi = await self.order_taxi_repo.create_order(
                 user_id=user_id,
                 idempotency_key=idempotency_key,
                 driver_id=driver.id,
@@ -80,6 +82,8 @@ class OrderTaxiService:
             await self.db.commit()
             await self.db.refresh(new_order_taxi)
 
+            await self.redis_cached.delete(entity="order", identifier="list")
+
             logger.info(f'Новый заказ {new_order_taxi} такси создан')
             return OrderResponceSchema.model_validate(new_order_taxi)
         except Exception as e:
@@ -87,11 +91,33 @@ class OrderTaxiService:
             logger.error(f'Ошибка при создании заказа: {e}')
             raise e
 
-    async def list_order(self) -> list[OrderResponceSchema]:
+    async def list_order(self) -> dict | list[dict]:
+        cached_list_order = await self.redis_cached.get(
+            entity="order",
+            identifier="list"
+        )
+        if cached_list_order:
+            logger.info('Список заказов вывелся из кеша')
+            await self.redis_cached.set(
+                entity="order",
+                identifier="list",
+                value=[]
+            )
+            return cached_list_order
+
         rows = await self.order_taxi_repo.list_order()
         if not rows:
             logger.info('Список заказов пуст')
-        return [OrderResponceSchema.model_validate(row) for row in rows]
+
+        orders = [OrderResponceSchema.model_validate(row) for row in rows]
+        order_to_cache = [order.model_dump(mode='json') for order in orders]
+        await self.redis_cached.set(
+            entity="order",
+            identifier="list",
+            value=order_to_cache
+        )
+
+        return order_to_cache
 
     async def delete_id_orders(self, order_id) -> None:
         order = await self.order_taxi_repo.get_by_id(order_id)
@@ -100,6 +126,17 @@ class OrderTaxiService:
             raise SearchError()
 
         await self.order_taxi_repo.delete_id_order(order_id)
+
+        await self.redis_cached.delete(
+            entity="order",
+            identifier=str(order_id)
+            )
+
+        await self.redis_cached.delete(
+                    entity="order",
+                    identifier="list"
+                    )
+
         await self.db.commit()
         return None
 
@@ -107,9 +144,26 @@ class OrderTaxiService:
         rows = await self.order_taxi_repo.get_history()
         return [OrderResponceSchema.model_validate(row) for row in rows]
 
-    async def get_order_id(self, order_id) -> OrderResponceSchema:
+    async def get_order_id(self, order_id) -> dict | list[dict]:
+        cached_order = await self.redis_cached.get(
+            entity="order",
+            identifier=str(order_id)
+            )
+        if cached_order:
+            logger.info(f"Заказ {order_id} взят из кэша!")
+            return cached_order
+
         row = await self.order_taxi_repo.get_by_id(order_id)
         if not row:
             raise SearchError()
 
-        return OrderResponceSchema.model_validate(row)
+        order = OrderResponceSchema.model_validate(row)
+        order_to_cache = order.model_dump(mode='json')
+
+        await self.redis_cached.set(
+            entity="order",
+            identifier=str(order_id),
+            value=order_to_cache
+            )
+
+        return order_to_cache

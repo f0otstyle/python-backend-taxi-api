@@ -18,7 +18,7 @@ class OrderTaxiRepository:
     async def get_by_id(self, order_id):
         return await self.db.get(OrderTaxiORM, order_id)
 
-    async def create_order_taxi(self, user_id: int,
+    async def create_order(self, user_id: int,
                                 idempotency_key: str | None,
                                 from_address: str,
                                 to_address: str,

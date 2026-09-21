@@ -18,6 +18,9 @@ jobs:
 
       - name: Start database
         run: docker compose up -d db
+      
+      - name: Start redis
+        run: docker compose up -d redis
 
       - name: Wait for database
         run: |
