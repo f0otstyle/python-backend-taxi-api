@@ -18,19 +18,29 @@ class OrderTaxiRepository:
     async def get_by_id(self, order_id):
         return await self.db.get(OrderTaxiORM, order_id)
 
-    async def create_order(self, user_id: int,
-                                idempotency_key: str | None,
-                                from_address: str,
-                                to_address: str,
-                                price: Decimal,
-                                driver_id: int | None = None
-                                ):
-        new_order_taxi = OrderTaxiORM(user_id=user_id,
-                                      from_address=from_address,
-                                      idempotency_key=idempotency_key,
-                                      to_address=to_address,
-                                      price=price,
-                                      driver_id=driver_id
+    async def create_order(self,
+                           user_id: int,
+                           idempotency_key: str | None,
+                           from_address: str,
+                           to_address: str,
+                           price: Decimal,
+                           driver_id: int | None = None,
+                           pickup_lat: float | None = None,
+                           pickup_lon: float | None = None,
+                           destination_lat: float | None = None,
+                           destination_lon: float | None = None
+                           ):
+        new_order_taxi = OrderTaxiORM(
+            user_id=user_id,
+            from_address=from_address,
+            idempotency_key=idempotency_key,
+            to_address=to_address,
+            price=price,
+            driver_id=driver_id,
+            pickup_lat=pickup_lat,
+            pickup_lon=pickup_lon,
+            destination_lat=destination_lat,
+            destination_lon=destination_lon
                                       )
         self.db.add(new_order_taxi)
         await self.db.flush()

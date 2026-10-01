@@ -19,7 +19,7 @@ router = APIRouter(prefix="/taxi", tags=["Taxi Orders"])
 )
 async def create_taxi_order(
     order_data: OrderCreate,
-    idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
+    idempotency_key: str = Header(alias="Idempotency-Key"),
     session: AsyncSession = Depends(get_session),
     token_data: TokenPayload = Depends(security.access_token_required)
 ) -> OrderResponceSchema:
@@ -92,3 +92,21 @@ async def history_order_taxi(
 
     service = service = OrderTaxiService(db=session)
     return await service.history_get()
+
+
+@router.post(
+    "/taxi/{user_id}/start",
+    status_code=status.HTTP_201_CREATED,
+    response_model=OrderResponceSchema
+)
+async def start_taxi_drive():
+    ...
+
+
+@router.post(
+    "/taxi/{user_id}/finish",
+    status_code=status.HTTP_201_CREATED,
+    response_model=OrderResponceSchema
+)
+async def finish_taxi_drive():
+    ...

@@ -20,3 +20,9 @@ class OrderTaxiORM(Base):
                                            nullable=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"),
                                          nullable=False)
+
+    pickup_lat: Mapped[float | None] = mapped_column(nullable=True)
+    pickup_lon: Mapped[float | None] = mapped_column(nullable=True)
+
+    destination_lat: Mapped[float | None] = mapped_column(nullable=True)
+    destination_lon: Mapped[float | None] = mapped_column(nullable=True)

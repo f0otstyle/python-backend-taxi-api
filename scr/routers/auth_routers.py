@@ -2,12 +2,13 @@ import bcrypt
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from scr.db.session import get_session
+from scr.db.session import get_session, get_rate_limiter
 from logging_log import logger
 
 from scr.schemas.auth_schemas import UserResponseSchema, UserRegisterSchema
 from scr.services.auth_service import AuthService
 from scr.auth.security import security, config
+from scr.cache.redis import Ratelimit
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -36,8 +37,22 @@ async def registrate(
 async def login(
     response: Response,
     user: UserRegisterSchema,
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    rate_limiter: Ratelimit = Depends(get_rate_limiter)
         ):
+
+    is_blocked = await rate_limiter.is_limited(
+        identifier=user.username,
+        endpoint="login",
+        max_request=5,
+        window_seconds=60
+    )
+    if is_blocked:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Слишком много попыток входа. Подождите 60 секунд."
+        )
+
     service = AuthService(db=session)
 
     existing_user = await service.get_user_by_username(username=user.username)

@@ -7,6 +7,10 @@ class OrderCreate(BaseModel):
     from_address: str
     to_address: str
     price: Decimal
+    pickup_lat: float
+    pickup_lon: float
+    destination_lat: float | None = None
+    destination_lon: float | None = None
 
 
 class OrderResponceSchema(BaseModel):

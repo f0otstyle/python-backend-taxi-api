@@ -1,5 +1,9 @@
 from datetime import datetime, timezone
+import asyncio
+from typing import cast
+from uuid import uuid4
 
+from fastapi import HTTPException
 
 from error_handler import OrderError, SearchError
 from scr.repositories.driver_repositories import DriversRepository
@@ -9,7 +13,8 @@ from scr.schemas.order_schemas import OrderCreate, OrderResponceSchema
 from logging_log import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 from scr.cache.redis import RedisCachedBackend
-
+from scr.cache.redis_geo import RedisGeo
+from logging_log import log
 
 TIME = 5
 
@@ -21,6 +26,7 @@ class OrderTaxiService:
         self.payment_repo = PaymentRepository(db=self.db)
         self.driver_repo = DriversRepository(db=self.db)
         self.redis_cached = RedisCachedBackend(cache_ttl_seconds=3600)
+        self.redis_geo = RedisGeo()
 
     async def create_order_taxi(self,
                                 user_id: int,
@@ -31,26 +37,36 @@ class OrderTaxiService:
                 idempotency_key
                 )
         if existing:
+            if existing.user_id != user_id:
+                raise HTTPException(409, "Ключ уже занят другим запросом")
             logger.info(f"Повторный запрос с ключом {idempotency_key}")
             return OrderResponceSchema.model_validate(existing)
 
-        current_time = datetime.now(timezone.utc).timestamp()
-        duplicate = await self.order_taxi_repo.get_duplicate(
-            user_id=user_id,
-            to_address=order_taxi_create.to_address
+        lock_key = f"lock:order:{user_id}:{idempotency_key}"
+        lock_token = str(uuid4())
+        lock_acquired = await self.redis_cached.redis.set(
+            lock_key,
+            lock_token,
+            nx=True,
+            ex=30
             )
 
-        if duplicate:
-            created_at = duplicate.created_at.timestamp()
-            time_diff = current_time - created_at
-            if time_diff < TIME:
-                logger.warning(
-                    f'Попытка создать дубликат заказа для {
-                        order_taxi_create.to_address
-                        } (прошло {time_diff:.1f} с)'
-                    )
-                raise OrderError()
-            logger.info('Можно сделать новый заказ')
+        if not lock_acquired:
+            for _ in range(20):
+                await asyncio.sleep(0.1)
+                existing = await self.order_taxi_repo.get_idempotency_key(
+                                idempotency_key
+                                )
+                if existing:
+                    if existing.user_id != user_id:
+                        raise HTTPException(409,
+                                            "Ключ уже занят другим запросом"
+                                            )
+                    logger.info(f"Повторный запрос с ключом {idempotency_key}")
+                    return OrderResponceSchema.model_validate(existing)
+            raise HTTPException(409,
+                                "Заказ ещё обрабатывается, повторите позже"
+                                )
         try:
             user_card = await self.payment_repo.get_by_user_id(user_id)
             if not user_card or user_card.balance < order_taxi_create.price:
@@ -59,22 +75,36 @@ class OrderTaxiService:
                     )
                 raise OrderError()
 
-            driver = await self.driver_repo.get_driver()
+            driver_ids = await self.redis_geo.get_geo_search(
+                lat=order_taxi_create.pickup_lat,
+                lon=order_taxi_create.pickup_lon
+                )
 
-            if not driver:
+            if not driver_ids:
                 logger.warning('Нет свободных водителей')
                 raise OrderError()
 
+            best_driver = None
+
+            for driver_id in driver_ids:
+                driver = await self.driver_repo.get_by_id(driver_id)
+                if not driver:
+                    continue
+                claimed = await self.driver_repo.claim_driver(driver_id)
+                if claimed:
+                    best_driver = driver
+                    break
+            if not best_driver:
+                raise OrderError()
+
             user_card.balance -= order_taxi_create.price
-            driver.money += order_taxi_create.price
 
             self.db.add(user_card)
-            self.db.add(driver)
 
             new_order_taxi = await self.order_taxi_repo.create_order(
                 user_id=user_id,
                 idempotency_key=idempotency_key,
-                driver_id=driver.id,
+                driver_id=best_driver.id,
                 from_address=order_taxi_create.from_address,
                 to_address=order_taxi_create.to_address,
                 price=order_taxi_create.price)
@@ -90,6 +120,21 @@ class OrderTaxiService:
             await self.db.rollback()
             logger.error(f'Ошибка при создании заказа: {e}')
             raise e
+        finally:
+            unlock_script = """
+            if redis.call("get", KEYS[1]) == ARGV[1] then
+                return redis.call("del", KEYS[1])
+            else
+                return 0
+            end
+            """
+            await self.redis_cached.redis.eval(
+                unlock_script,
+                1,
+                lock_key,
+                lock_token
+                )
+            logger.info(f"Блокировка для {idempotency_key} снята")
 
     async def list_order(self) -> dict | list[dict]:
         cached_list_order = await self.redis_cached.get(
@@ -144,6 +189,7 @@ class OrderTaxiService:
         rows = await self.order_taxi_repo.get_history()
         return [OrderResponceSchema.model_validate(row) for row in rows]
 
+    # @log
     async def get_order_id(self, order_id) -> dict | list[dict]:
         cached_order = await self.redis_cached.get(
             entity="order",
@@ -153,17 +199,48 @@ class OrderTaxiService:
             logger.info(f"Заказ {order_id} взят из кэша!")
             return cached_order
 
-        row = await self.order_taxi_repo.get_by_id(order_id)
-        if not row:
-            raise SearchError()
-
-        order = OrderResponceSchema.model_validate(row)
-        order_to_cache = order.model_dump(mode='json')
-
-        await self.redis_cached.set(
-            entity="order",
-            identifier=str(order_id),
-            value=order_to_cache
+        lock_key = f"lock:taxi:order:{order_id}"
+        lock_acquired = await self.redis_cached.redis.set(
+            lock_key,
+            "1",
+            nx=True,
+            ex=10
             )
+        if lock_acquired:
+            logger.warning(
+                f'DB HIT (С ЗАЩИТОЙ): Только я иду в БД для заказа {order_id}'
+            )
+            try:
+                row = await self.order_taxi_repo.get_by_id(order_id)
+                if row:
+                    order = OrderResponceSchema.model_validate(row)
+                    order_to_cache = order.model_dump(mode='json')
 
-        return order_to_cache
+                    await self.redis_cached.set(
+                        entity="order",
+                        identifier=str(order_id),
+                        value=order_to_cache
+                        )
+                    logger.info(f'Кэш для заказа {order_id} обновлен')
+                    return order_to_cache
+            finally:
+                await self.redis_cached.redis.delete(lock_key)
+
+            logger.warning(f'Попытка найти несуществующий заказ {order_id}')
+            raise SearchError()
+        else:
+            logger.info(
+                f'CACHE WAIT: Жду, пока другой поток обновит кэш ({order_id})'
+            )
+            await asyncio.sleep(0.05)
+            order_cache = await self.redis_cached.get(
+                entity="order",
+                identifier=str(order_id)
+                )
+            if order_cache:
+                logger.info(
+                    f'CACHE HIT: Заказ по {order_id} найден в кэше'
+                    )
+                return cast(dict, order_cache)
+
+            raise SearchError()
