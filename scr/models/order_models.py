@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import TIMESTAMP, ForeignKey, Numeric, func
+from sqlalchemy import TIMESTAMP, ForeignKey, Numeric, String, func
 
 from .base import Base, str_256, money_money
 from sqlalchemy.orm import mapped_column, Mapped
@@ -26,3 +26,8 @@ class OrderTaxiORM(Base):
 
     destination_lat: Mapped[float | None] = mapped_column(nullable=True)
     destination_lon: Mapped[float | None] = mapped_column(nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(20),
+        default="created",
+        server_default="created"
+    )

@@ -10,13 +10,23 @@ class DriversRepository:
         self.db = db
 
     async def get_by_id(self, driver_id: int):
+        return await self.db.get(DriversORM, driver_id)
+
+    async def get_online_by_id(self, driver_id: int):
         result = await self.db.execute(select(DriversORM).where(
-            and_(
-                DriversORM.id == driver_id,
-                DriversORM.status == 'online'
-            )
-        ))
+                    and_(
+                        DriversORM.id == driver_id,
+                        DriversORM.status == 'online'
+                    )
+                ))
         return result.scalar_one_or_none()
+
+    async def set_driver_status(self, driver_id: int, status: str):
+        stmt = (update(DriversORM)
+                .where(DriversORM.id == driver_id)
+                .values(status=status)
+                )
+        await self.db.execute(stmt)
 
     async def create_driver(self, driver_name: str, driver_car: str):
         new_driver = DriversORM(name=driver_name, car=driver_car)
@@ -43,9 +53,14 @@ class DriversRepository:
     async def update_status_driver(self,
                                    driver_id: int,
                                    status: str,
-                                   lat: float,
-                                   lon: float
+                                   lat: float | None = None,
+                                   lon: float | None = None
                                    ):
+        values: dict = {"status": status}
+        if lat is not None:
+            values["lat"] = lat
+        if lon is not None:
+            values["lon"] = lon
         stmt = (update(DriversORM)
                 .where(DriversORM.id == driver_id)
                 .values(status=status, lat=lat, lon=lon)

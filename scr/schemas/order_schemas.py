@@ -1,6 +1,14 @@
 from decimal import Decimal
+from enum import Enum
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
+
+
+class OrderStatus(str, Enum):
+    CREATED = "created"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
 
 
 class OrderCreate(BaseModel):
@@ -13,6 +21,10 @@ class OrderCreate(BaseModel):
     destination_lon: float | None = None
 
 
+class OrderDriveBegin(BaseModel):
+    trip: OrderStatus
+
+
 class OrderResponceSchema(BaseModel):
     id: int
     from_address: str
@@ -21,6 +33,7 @@ class OrderResponceSchema(BaseModel):
     driver_id: int | None
     created_at: datetime
     user_id: int
+    status: OrderStatus
     model_config = ConfigDict(
                 from_attributes=True,
                 populate_by_name=True)

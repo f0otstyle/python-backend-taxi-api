@@ -107,7 +107,12 @@ class OrderTaxiService:
                 driver_id=best_driver.id,
                 from_address=order_taxi_create.from_address,
                 to_address=order_taxi_create.to_address,
-                price=order_taxi_create.price)
+                price=order_taxi_create.price,
+                pickup_lat=order_taxi_create.pickup_lat,
+                pickup_lon=order_taxi_create.pickup_lon,
+                destination_lat=order_taxi_create.destination_lat,
+                destination_lon=order_taxi_create.destination_lon
+                )
 
             await self.db.commit()
             await self.db.refresh(new_order_taxi)

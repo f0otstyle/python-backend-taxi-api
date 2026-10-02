@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, select, update
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from scr.models.order_models import OrderTaxiORM
@@ -98,3 +98,20 @@ class OrderTaxiRepository:
             .order_by(OrderTaxiORM.created_at.desc())
             )
         return result.scalars().all()
+
+    async def update_order_status(
+            self,
+            order_id: int,
+            new_status: str,
+            expected_status: str,
+            expected_driver_id: int
+            ) -> OrderTaxiORM | None:
+        stmt = (update(OrderTaxiORM).where(
+            and_(
+                OrderTaxiORM.id == order_id,
+                OrderTaxiORM.status == expected_status,
+                OrderTaxiORM.driver_id == expected_driver_id
+            )
+        ).values(status=new_status)).returning(OrderTaxiORM)
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()

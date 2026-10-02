@@ -4,10 +4,12 @@ from authx import TokenPayload
 
 from logging_log import log
 from scr.db.session import get_session
+from scr.schemas.driver_schemas import DriverUpdateStatusSchema
 from scr.services.order_service import OrderTaxiService
 from scr.schemas.order_schemas import OrderCreate, OrderResponceSchema
 
 from scr.auth.security import security
+from scr.services.ride_service import RideService
 
 router = APIRouter(prefix="/taxi", tags=["Taxi Orders"])
 
@@ -95,18 +97,34 @@ async def history_order_taxi(
 
 
 @router.post(
-    "/taxi/{user_id}/start",
+    "/{user_id}/start",
     status_code=status.HTTP_201_CREATED,
     response_model=OrderResponceSchema
 )
-async def start_taxi_drive():
-    ...
+async def start_taxi_drive(
+    order_id: int,
+    session: AsyncSession = Depends(get_session),
+    token_data: TokenPayload = Depends(security.access_token_required)
+):
+    service = RideService(db=session)
+    return await service.start_trip(
+        order_id=order_id,
+        user_id=int(token_data.sub)
+        )
 
 
 @router.post(
-    "/taxi/{user_id}/finish",
+    "/{user_id}/finish",
     status_code=status.HTTP_201_CREATED,
     response_model=OrderResponceSchema
 )
-async def finish_taxi_drive():
-    ...
+async def finish_taxi_drive(
+    order_id: int,
+    session: AsyncSession = Depends(get_session),
+    token_data: TokenPayload = Depends(security.access_token_required)
+):
+    service = RideService(db=session)
+    return await service.finish_ride(
+        order_id=order_id,
+        user_id=int(token_data.sub)
+        )
