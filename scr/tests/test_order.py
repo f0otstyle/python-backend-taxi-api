@@ -47,7 +47,8 @@ def test_idempotency(order_fixture):
                     headers=headers,
                     cookies={"my_cookie": cookie}
                 )
-    responce_one_id = responce_one.json()['id']
+    body = responce_one.json()
+    responce_one_id = body['id']
     assert responce_one.status_code == 201
 
     responce_two = session.post(
@@ -56,7 +57,8 @@ def test_idempotency(order_fixture):
             headers=headers,
             cookies={"my_cookie": cookie}
             )
-    responce_two_id = responce_two.json()['id']
+    body = responce_two.json()
+    responce_two_id = body['id']
     assert responce_two.status_code == 201
     assert responce_one_id == responce_two_id
 

@@ -24,3 +24,15 @@ def test_taxi_drivers(name, car):
     assert isinstance(body["car"], str)
     assert body["name"] == name
     assert body["car"] == car
+
+    driver_id = body["id"]
+    request_data = {
+        "status": "online",
+        "lat": 55.7558,
+        "lon": 37.6173
+        }
+    result = requests.post(
+            f'{BASE_URL}/drivers/status/{driver_id}',
+            json=request_data,
+        )
+    assert result.status_code == 200

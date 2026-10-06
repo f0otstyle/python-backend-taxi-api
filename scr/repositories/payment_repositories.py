@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from scr.models.payment_models import PaymentORM
 from logging_log import logger
@@ -10,7 +11,10 @@ class PaymentRepository:
         self.db = db
 
     async def get_by_user_id(self, user_id):
-        return await self.db.get(PaymentORM, user_id)
+        result = await self.db.execute(
+            select(PaymentORM).where(PaymentORM.user_id == user_id)
+        )
+        return result.scalar_one_or_none()
 
     async def upsert_balance(self, user_id: int,
                              money: Decimal

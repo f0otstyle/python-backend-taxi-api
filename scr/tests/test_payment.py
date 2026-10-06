@@ -14,7 +14,7 @@ def test_top_up_your_card(money, test_user):
     user_id = test_user
 
     with requests.Session() as session:
-        login_response = session.post(f'{BASE_URL}/auth/login', json=USER)
+        login_response = session.post(f'{BASE_URL}/auth/login', json=test_user)
         assert login_response.status_code == 200
         cookie = session.cookies.get("my_cookie")
 

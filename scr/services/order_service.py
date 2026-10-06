@@ -97,10 +97,6 @@ class OrderTaxiService:
             if not best_driver:
                 raise OrderError()
 
-            user_card.balance -= order_taxi_create.price
-
-            self.db.add(user_card)
-
             new_order_taxi = await self.order_taxi_repo.create_order(
                 user_id=user_id,
                 idempotency_key=idempotency_key,

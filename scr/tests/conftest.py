@@ -6,12 +6,13 @@ import pytest
 
 @pytest.fixture
 def test_user():
-
+    user = {'username': f'user_{uuid.uuid4().hex[:8]}', 'password': '1234'}
     registrate_response = requests.post(
         f'{BASE_URL}/auth/registrate',
-        json=USER
+        json=user
         )
-    assert registrate_response.status_code in (201, 400)
+    assert registrate_response.status_code == 201
+    return user
 
 
 @pytest.fixture
@@ -20,16 +21,29 @@ def order_fixture(test_user):
     request_data = {
                 'from_address': f'Маркса {unique}',
                 'to_address': f'Ватутино {unique}',
-                'price': 350
+                'price': 350,
+                "pickup_lat": 55.7600,
+                "pickup_lon": 37.6100,
+                "destination_lat": 55.7539,
+                "destination_lon": 37.6208
         }
     headers = {
                 "Idempotency-Key": str(uuid.uuid4())
             }
     session = requests.Session()
-    login_response = session.post(f'{BASE_URL}/auth/login', json=USER)
+    login_response = session.post(f'{BASE_URL}/auth/login', json=test_user)
     assert login_response.status_code == 200
 
     cookie = session.cookies.get("my_cookie")
+
+    driver = session.post(f'{BASE_URL}/drivers',
+                          json={'name': 'Тест',
+                                'car': 'Lada'})
+    driver_id = driver.json()['id']
+    status = session.post(f'{BASE_URL}/drivers/status/{driver_id}',
+                          json={'status': 'online', 'lat': 55.76, 'lon': 37.61}
+                          )
+    assert status.status_code == 200
 
     pay_response = session.post(
         f'{BASE_URL}/pay/top-up',

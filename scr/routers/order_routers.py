@@ -36,6 +36,19 @@ async def create_taxi_order(
     )
 
 
+@router.get('/history',
+            status_code=status.HTTP_200_OK,
+            dependencies=[Depends(security.access_token_required)])
+@log
+async def history_order_taxi(
+    session: AsyncSession = Depends(get_session),
+    token_data: TokenPayload = Depends(security.access_token_required)
+     ):
+
+    service = service = OrderTaxiService(db=session)
+    return await service.history_get()
+
+
 @router.get(
     "/{order_id}",
     status_code=status.HTTP_200_OK,
@@ -83,21 +96,8 @@ async def list_of_orders(
     return await service.list_order()
 
 
-@router.get('/history',
-            status_code=status.HTTP_200_OK,
-            dependencies=[Depends(security.access_token_required)])
-@log
-async def history_order_taxi(
-    session: AsyncSession = Depends(get_session),
-    token_data: TokenPayload = Depends(security.access_token_required)
-     ):
-
-    service = service = OrderTaxiService(db=session)
-    return await service.history_get()
-
-
 @router.post(
-    "/{user_id}/start",
+    "/{order_id}/start",
     status_code=status.HTTP_201_CREATED,
     response_model=OrderResponceSchema
 )
@@ -114,7 +114,7 @@ async def start_taxi_drive(
 
 
 @router.post(
-    "/{user_id}/finish",
+    "/{order_id}/finish",
     status_code=status.HTTP_201_CREATED,
     response_model=OrderResponceSchema
 )
