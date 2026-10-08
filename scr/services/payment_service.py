@@ -12,9 +12,15 @@ class PaymentService:
                              user_id: int,
                              payment: MoneySchema
                              ) -> PaymentResponceSchema:
-        updated_card = await self.payment_rep.upsert_balance(
+        updated_card = await self.payment_rep.update_balance(
             user_id=user_id,
             money=payment.money
             )
         await self.db.commit()
         return PaymentResponceSchema.model_validate(updated_card)
+
+    async def balance_user(self, user_id: int) -> PaymentResponceSchema:
+        user_balance = await self.payment_rep.get_balance_users(
+            user_id=user_id
+        )
+        return PaymentResponceSchema.model_validate(user_balance)

@@ -5,6 +5,8 @@ from redis.asyncio import Redis
 from scr.core.config import settings
 import json
 
+ORDER_ENTITY = "order"
+
 
 class RedisCachedBackend:
     def __init__(self, cache_ttl_seconds: int | None):

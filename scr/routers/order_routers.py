@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Header, status
+from fastapi import APIRouter, Depends, HTTPException, Header, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from authx import TokenPayload
 
@@ -124,7 +124,13 @@ async def finish_taxi_drive(
     token_data: TokenPayload = Depends(security.access_token_required)
 ):
     service = RideService(db=session)
-    return await service.finish_ride(
+    finish_drive = await service.finish_ride(
         order_id=order_id,
         user_id=int(token_data.sub)
         )
+    if not finish_drive:
+        raise HTTPException(
+            500,
+            "Поездка не законченна"
+            )
+    return OrderResponceSchema.model_validate(finish_drive)

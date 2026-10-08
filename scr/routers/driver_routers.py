@@ -66,3 +66,19 @@ async def update_drivers_location(
     except SQLAlchemyError:
         logger.exception('Ошибка не подключения к бд')
         raise HTTPException(status_code=500, detail="Ошибка базы данных")
+
+
+@router.get('/{driver_id}', status_code=status.HTTP_200_OK)
+@log
+async def get_drivers_driver_id(
+    driver_id: int,
+    session: AsyncSession = Depends(get_session)
+        ):
+    try:
+        service = DriverService(db=session)
+        get_drivers = await service.get_driver_id(driver_id)
+        if get_drivers:
+            return get_drivers
+    except SQLAlchemyError:
+        logger.exception('Ошибка не подключения к бд')
+        raise HTTPException(status_code=500, detail="Ошибка базы данных")

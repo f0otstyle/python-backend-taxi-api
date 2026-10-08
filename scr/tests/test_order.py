@@ -79,3 +79,39 @@ def test_order_delete(order_fixture):
                          cookies={"my_cookie": cookie}
                          )
     assert result.status_code == 404
+
+
+def test_start_and_finish(order_fixture):
+    response = order_fixture['response']
+    cookie = order_fixture['cookies']
+    session = order_fixture['session']
+
+    order_id = response.json()["id"]
+
+    order_start = session.post(f'{BASE_URL}/taxi/{order_id}/start',
+                               cookies={"my_cookie": cookie}
+                               )
+
+    assert order_start.status_code == 201
+
+    order_finish = session.post(f'{BASE_URL}/taxi/{order_id}/finish',
+                                cookies={"my_cookie": cookie}
+                                )
+
+    assert order_finish.status_code == 201
+
+    balance = session.get(f'{BASE_URL}/pay/balance',
+                          cookies={"my_cookie": cookie}
+                          )
+    body_balance = balance.json()
+    assert balance.status_code == 200
+    assert float(body_balance["balance"]) == 650.00
+
+    driver_id = order_finish.json()["driver_id"]
+
+    drivers = session.get(f'{BASE_URL}/drivers/{driver_id}',
+                          cookies={"my_cookie": cookie}
+                          )
+    body_drivers = drivers.json()
+    assert drivers.status_code == 200
+    assert float(body_drivers["money"]) == 350.00

@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from sqlalchemy import and_, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from scr.models.driver_models import DriversORM
@@ -90,4 +92,16 @@ class DriversRepository:
                 .values(status=DriverStatus.BUSY)
                 .returning(DriversORM))
         result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def update_payment_driver(
+            self,
+            driver_id,
+            payment: Decimal
+            ):
+        driver_payment = (update(DriversORM)
+                          .values(money=DriversORM.money + payment)
+                          .where(DriversORM.id == driver_id)
+                          .returning(DriversORM))
+        result = await self.db.execute(driver_payment)
         return result.scalar_one_or_none()

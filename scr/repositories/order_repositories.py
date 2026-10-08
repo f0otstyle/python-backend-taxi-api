@@ -4,6 +4,7 @@ from sqlalchemy import and_, select, update
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from scr.models.order_models import OrderTaxiORM
+from scr.models.driver_models import DriversORM
 from logging_log import logger
 
 

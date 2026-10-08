@@ -12,7 +12,7 @@ from scr.repositories.payment_repositories import PaymentRepository
 from scr.schemas.order_schemas import OrderCreate, OrderResponceSchema
 from logging_log import logger
 from sqlalchemy.ext.asyncio import AsyncSession
-from scr.cache.redis import RedisCachedBackend
+from scr.cache.redis import ORDER_ENTITY, RedisCachedBackend
 from scr.cache.redis_geo import RedisGeo
 from logging_log import log
 
@@ -139,7 +139,7 @@ class OrderTaxiService:
 
     async def list_order(self) -> dict | list[dict]:
         cached_list_order = await self.redis_cached.get(
-            entity="order",
+            entity=ORDER_ENTITY,
             identifier="list"
         )
         if cached_list_order:
@@ -179,7 +179,7 @@ class OrderTaxiService:
             )
 
         await self.redis_cached.delete(
-                    entity="order",
+                    entity=ORDER_ENTITY,
                     identifier="list"
                     )
 
@@ -193,7 +193,7 @@ class OrderTaxiService:
     # @log
     async def get_order_id(self, order_id) -> dict | list[dict]:
         cached_order = await self.redis_cached.get(
-            entity="order",
+            entity=ORDER_ENTITY,
             identifier=str(order_id)
             )
         if cached_order:

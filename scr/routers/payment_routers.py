@@ -36,7 +36,42 @@ async def top_up_your_card(
             return {"message": f"Баланс пополнен на {payload.money}"}
 
     except IntegrityError:
-        raise HTTPException(status_code=500, detail="Пользователь не найден")
+        raise HTTPException(
+            status_code=500,
+            detail="Пользователь не найден"
+            )
     except Exception as e:
         logger.exception(f"Неожиданная ошибка {e}")
-        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
+        raise HTTPException(
+            status_code=500,
+            detail="Внутренняя ошибка сервера"
+            )
+
+
+@router.get('/balance',
+            status_code=status.HTTP_200_OK)
+@log
+async def get_users_balance_user_id(
+    session: AsyncSession = Depends(get_session),
+    token_data: TokenPayload = Depends(security.access_token_required)
+        ):
+    try:
+        user_id = int(token_data.sub)
+        service = PaymentService(db=session)
+        balance = await service.balance_user(
+                user_id=user_id,
+                )
+        if balance:
+            return balance
+
+    except IntegrityError:
+        raise HTTPException(
+            status_code=500,
+            detail="Пользователь не найден"
+            )
+    except Exception as e:
+        logger.exception(f"Неожиданная ошибка {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Внутренняя ошибка сервера"
+            )

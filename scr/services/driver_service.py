@@ -3,7 +3,8 @@ from error_handler import SearchError
 from scr.repositories.driver_repositories import DriversRepository
 from scr.schemas.driver_schemas import (DriverCreate,
                                         DriverResponseSchema,
-                                        DriverSchema)
+                                        DriverSchema,
+                                        DriverResponse)
 from scr.cache.redis_geo import RedisGeo
 from logging_log import logger
 
@@ -75,3 +76,12 @@ class DriverService:
         drivers = await self.geo_redis.get_geo_search(lat=lat, lon=lon)
         logger.info(f"Найдено {len(drivers)} водителей в радиусе {3} км")
         return drivers
+
+    async def get_driver_id(
+            self,
+            driver_id: int
+            ) -> DriverResponse:
+        driver = await self.drive_repo.get_by_id(
+            driver_id=driver_id
+        )
+        return DriverResponse.model_validate(driver)
