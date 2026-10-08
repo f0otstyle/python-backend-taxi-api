@@ -66,6 +66,7 @@ class DriverResponse(BaseModel):
     car: str
     status: DriverStatus
     rating: float
+    money: Decimal
 
     model_config = ConfigDict(
         from_attributes=True
