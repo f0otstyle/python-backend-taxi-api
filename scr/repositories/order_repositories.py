@@ -105,14 +105,16 @@ class OrderTaxiRepository:
             order_id: int,
             new_status: str,
             expected_status: str,
-            expected_driver_id: int
+            expected_driver_id: int | None = None
             ) -> OrderTaxiORM | None:
         stmt = (update(OrderTaxiORM).where(
             and_(
                 OrderTaxiORM.id == order_id,
                 OrderTaxiORM.status == expected_status,
-                OrderTaxiORM.driver_id == expected_driver_id
             )
-        ).values(status=new_status)).returning(OrderTaxiORM)
+        ).values(
+                status=new_status,
+                driver_id=expected_driver_id
+                )).returning(OrderTaxiORM)
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()

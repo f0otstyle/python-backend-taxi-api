@@ -29,7 +29,7 @@ class RideService:
         updated = await self.order_repo.update_order_status(
             order_id=order_id,
             new_status=OrderStatus.IN_PROGRESS.value,
-            expected_status=OrderStatus.CREATED.value,
+            expected_status=OrderStatus.ACCEPTED.value,
             expected_driver_id=order.driver_id)
         if not updated:
             raise HTTPException(409, "Поездка уже начата или заказ неактивен")

@@ -5,6 +5,8 @@ from authx import TokenPayload
 from logging_log import log
 from scr.db.session import get_session
 from scr.schemas.driver_schemas import DriverUpdateStatusSchema
+from scr.schemas.offer_schemas import OfferResponceSchemas
+from scr.services.offer_services import OfferService
 from scr.services.order_service import OrderTaxiService
 from scr.schemas.order_schemas import OrderCreate, OrderResponceSchema
 
@@ -47,6 +49,16 @@ async def history_order_taxi(
 
     service = service = OrderTaxiService(db=session)
     return await service.history_get()
+
+
+@router.get("/offers/order/{order_id}", status_code=status.HTTP_200_OK)
+async def get_offers_for_order(
+    order_id: int,
+    session: AsyncSession = Depends(get_session),
+    token_data: TokenPayload = Depends(security.access_token_required)
+) -> list[OfferResponceSchemas]:
+    service = OfferService(db=session)
+    return await service.get_offers(order_id)
 
 
 @router.get(
@@ -94,6 +106,15 @@ async def list_of_orders(
 
     service = OrderTaxiService(db=session)
     return await service.list_order()
+
+
+@router.post("/{offer_id}/accept", status_code=status.HTTP_200_OK)
+async def accept_ride_offer(
+    offer_id: int,
+    session: AsyncSession = Depends(get_session)
+):
+    service = OfferService(db=session)
+    return await service.accept_offer(offer_id=offer_id)
 
 
 @router.post(

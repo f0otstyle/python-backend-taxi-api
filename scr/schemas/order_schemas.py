@@ -7,6 +7,7 @@ from datetime import datetime
 class OrderStatus(str, Enum):
     CREATED = "created"
     IN_PROGRESS = "in_progress"
+    ACCEPTED = "accepted"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
 

@@ -7,6 +7,7 @@ from fastapi import HTTPException
 
 from error_handler import OrderError, SearchError
 from scr.repositories.driver_repositories import DriversRepository
+from scr.repositories.offer_repositories import OfferRepository
 from scr.repositories.order_repositories import OrderTaxiRepository
 from scr.repositories.payment_repositories import PaymentRepository
 from scr.schemas.order_schemas import OrderCreate, OrderResponceSchema
@@ -15,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from scr.cache.redis import ORDER_ENTITY, RedisCachedBackend
 from scr.cache.redis_geo import RedisGeo
 from logging_log import log
+from scr.websocket.manager import ConnectionManager
 
 TIME = 5
 
@@ -27,6 +29,8 @@ class OrderTaxiService:
         self.driver_repo = DriversRepository(db=self.db)
         self.redis_cached = RedisCachedBackend(cache_ttl_seconds=3600)
         self.redis_geo = RedisGeo()
+        self.offer_repo = OfferRepository(db=db)
+        self.manager = ConnectionManager()
 
     async def create_order_taxi(self,
                                 user_id: int,
@@ -77,7 +81,8 @@ class OrderTaxiService:
 
             driver_ids = await self.redis_geo.get_geo_search(
                 lat=order_taxi_create.pickup_lat,
-                lon=order_taxi_create.pickup_lon
+                lon=order_taxi_create.pickup_lon,
+                radius=3.0
                 )
 
             if not driver_ids:
@@ -100,7 +105,7 @@ class OrderTaxiService:
             new_order_taxi = await self.order_taxi_repo.create_order(
                 user_id=user_id,
                 idempotency_key=idempotency_key,
-                driver_id=best_driver.id,
+                driver_id=None,
                 from_address=order_taxi_create.from_address,
                 to_address=order_taxi_create.to_address,
                 price=order_taxi_create.price,
@@ -108,6 +113,20 @@ class OrderTaxiService:
                 pickup_lon=order_taxi_create.pickup_lon,
                 destination_lat=order_taxi_create.destination_lat,
                 destination_lon=order_taxi_create.destination_lon
+                )
+
+            await self.offer_repo.create_accept_offer_cas(
+                order_id=new_order_taxi.id,
+                driver_ids=driver_ids
+            )
+            for driver_id in driver_ids:
+                await self.manager.send_personal_message(
+                    message={
+                        "order_id": new_order_taxi.id,
+                        "from_address": order_taxi_create.from_address,
+                        "price": float(order_taxi_create.price)
+                    },
+                    driver_id=driver_id
                 )
 
             await self.db.commit()
@@ -171,6 +190,7 @@ class OrderTaxiService:
             logger.error('Записи нету')
             raise SearchError()
 
+        await self.offer_repo.delete_offers_by_order_id(order_id)
         await self.order_taxi_repo.delete_id_order(order_id)
 
         await self.redis_cached.delete(

@@ -13,6 +13,7 @@ from scr.routers.auth_routers import router as auth_router
 from scr.routers.order_routers import router as order_router
 from scr.routers.payment_routers import router as payment_router
 from scr.routers.driver_routers import router as driver_router
+from scr.routers.websocket_routers import router as ws_router
 
 app = FastAPI(
     title="Taxi API Microservice",
@@ -25,6 +26,7 @@ app.include_router(auth_router)
 app.include_router(order_router)
 app.include_router(payment_router)
 app.include_router(driver_router)
+app.include_router(ws_router)
 
 
 @app.exception_handler(OrderError)

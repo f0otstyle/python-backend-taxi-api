@@ -88,9 +88,27 @@ def test_start_and_finish(order_fixture):
 
     order_id = response.json()["id"]
 
+    offer_order = session.get(f'{BASE_URL}/taxi/offers/order/{order_id}',
+                              cookies={"my_cookie": cookie})
+
+    assert offer_order.status_code == 200
+
+    offers = offer_order.json()
+    offer_id = offers[0]["id"]
+
+    offer_order = session.post(f'{BASE_URL}/taxi/{offer_id}/accept',
+                               cookies={"my_cookie": cookie})
+
     order_start = session.post(f'{BASE_URL}/taxi/{order_id}/start',
                                cookies={"my_cookie": cookie}
                                )
+
+    driver_id = order_start.json()["driver_id"]
+    drivers = session.get(f'{BASE_URL}/drivers/{driver_id}',
+                          cookies={"my_cookie": cookie}
+                          )
+    body_drivers = drivers.json()
+    money_before = float(body_drivers["money"])
 
     assert order_start.status_code == 201
 
@@ -114,4 +132,7 @@ def test_start_and_finish(order_fixture):
                           )
     body_drivers = drivers.json()
     assert drivers.status_code == 200
-    assert float(body_drivers["money"]) == 350.00
+
+    money_after = float(body_drivers["money"])
+    expected_money = money_before + 350.0
+    assert money_after == expected_money

@@ -19,12 +19,12 @@ class RedisGeo:
     async def remove_driver(self, driver_id: int):
         return await self.redis.zrem(self.key, f"drivers:{driver_id}")
 
-    async def get_geo_search(self, lat: float, lon: float):
+    async def get_geo_search(self, lat: float, lon: float, radius: float):
         results = await self.redis.geosearch(
             name=self.key,
             longitude=lon,
             latitude=lat,
-            radius=3,
+            radius=radius,
             unit="km",
             count=10,
             sort="ASC"
